@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model SequelizeMeta {
+  name String @id @db.VarChar(255)
+}
+
+model auth_refresh_tokens {
+  id          String    @id @db.Uuid
+  employee_id String    @db.Uuid
+  token_hash  String    @unique @db.VarChar(255)
+  user_agent  String?   @db.VarChar(255)
+  ip_address  String?   @db.VarChar(255)
+  expires_at  DateTime  @db.Timestamptz(6)
+  revoked_at  DateTime? @db.Timestamptz(6)
+  created_at  DateTime  @db.Timestamptz(6)
+  employee    employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade)
+}
+
+model case_lawyers {
+  case_id     String   @db.Uuid
+  employee_id String   @db.Uuid
+  assigned_at DateTime @db.Timestamptz(6)
+  cases       cases    @relation(fields: [case_id], references: [id], onDelete: Cascade)
+  employee    employee @relation(fields: [employee_id], references: [id], onDelete: Cascade)
+
+  @@id([case_id, employee_id])
+}
+
+model cases {
+  id                 String               @id @db.Uuid
+  public_id          String               @unique @db.VarChar(255)
+  client_id          String               @db.Uuid
+  status             enum_cases_status    @default(OPEN)
+  plaintiff          String?              @db.VarChar(255)
+  defendant          String?              @db.VarChar(255)
+  court_name         String?              @db.VarChar(255)
+  docket_year        Int?
+  docket_number_text String?              @db.VarChar(255)
+  case_summary       String?
+  created_at         DateTime             @db.Timestamptz(6)
+  updated_at         DateTime             @db.Timestamptz(6)
+  case_lawyers       case_lawyers[]
+  clients            clients              @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  collections        collections[]
+  expenses           expenses[]
+  payment_agreements payment_agreements[]
+}
+
+model clients {
+  id                 String                   @id @db.Uuid
+  public_id          String                   @unique @db.VarChar(255)
+  display_name       String                   @db.VarChar(255)
+  client_type        enum_clients_client_type
+  national_id        String?                  @db.VarChar(255)
+  tax_number         String?                  @db.VarChar(255)
+  phone              String?                  @db.VarChar(255)
+  email              String?                  @db.VarChar(255)
+  address            String?
+  is_active          Boolean                  @default(true)
+  created_at         DateTime                 @db.Timestamptz(6)
+  updated_at         DateTime                 @db.Timestamptz(6)
+  cases              cases[]
+  collections        collections[]
+  expenses           expenses[]
+  payment_agreements payment_agreements[]
+}
+
+model collections {
+  id                      String                       @id @db.Uuid
+  public_id               String                       @unique @db.VarChar(255)
+  client_id               String?                      @db.Uuid
+  case_id                 String?                      @db.Uuid
+  agreement_id            String?                      @db.Uuid
+  installment_id          String?                      @db.Uuid
+  expense_id              String?                      @db.Uuid
+  source_type             enum_collections_source_type
+  method                  enum_collections_method
+  amount                  Decimal                      @db.Decimal(14, 2)
+  currency                enum_collections_currency
+  received_at             DateTime                     @db.Timestamptz(6)
+  received_by_employee_id String?                      @db.Uuid
+  description             String?
+  created_at              DateTime                     @db.Timestamptz(6)
+  payment_agreements      payment_agreements?          @relation(fields: [agreement_id], references: [id])
+  cases                   cases?                       @relation(fields: [case_id], references: [id])
+  clients                 clients?                     @relation(fields: [client_id], references: [id])
+  expenses                expenses?                    @relation(fields: [expense_id], references: [id])
+  installments            installments?                @relation(fields: [installment_id], references: [id])
+  employee                employee?                    @relation(fields: [received_by_employee_id], references: [id])
+  receipts                receipts?
+}
+
+model departments {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String                 @db.VarChar(255)
+  is_active            Boolean                @default(true)
+  created_at           DateTime               @db.Timestamptz(6)
+  updated_at           DateTime               @db.Timestamptz(6)
+  description          String?                @db.VarChar(255)
+  employee_departments employee_departments[]
+}
+
+model employee {
+  id                  String                @id @db.Uuid
+  fullname            String                @db.VarChar(255)
+  email               String                @unique @db.VarChar(255)
+  password_hash       String                @db.VarChar(255)
+  phone               String                @db.VarChar(255)
+  role                enum_employee_role
+  photo_url           String?               @db.VarChar(255)
+  hired_at            DateTime?             @db.Date
+  address             String?
+  is_active           Boolean               @default(true)
+  created_at          DateTime              @db.Timestamptz(6)
+  updated_at          DateTime              @db.Timestamptz(6)
+  auth_refresh_tokens auth_refresh_tokens[]
+  case_lawyers        case_lawyers[]
+  collections         collections[]
+  expenses            expenses[]
+  notifications       notifications[]
+}
+
+model employee_departments {
+  employee_id   String      @db.Uuid
+  department_id String      @db.Uuid
+  created_at    DateTime    @db.Timestamptz(6)
+  departments   departments @relation(fields: [department_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employees     employees   @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([employee_id, department_id])
+}
+
+model employees {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name            String                 @db.VarChar
+  email                String                 @unique @db.VarChar
+  password_hash        String                 @db.VarChar
+  phone                String?                @db.VarChar
+  role                 employee_role_enum
+  photo_url            String?                @db.VarChar
+  hired_at             DateTime?              @db.Date
+  address              String?
+  is_active            Boolean                @default(true)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  employee_departments employee_departments[]
+}
+
+model expenses {
+  id                   String                             @id @db.Uuid
+  public_id            String                             @unique @db.VarChar(255)
+  category             enum_expenses_category
+  expense_date         DateTime                           @db.Date
+  amount               Decimal                            @db.Decimal(14, 2)
+  currency             enum_expenses_currency
+  description          String?
+  paid_by_employee_id  String?                            @db.Uuid
+  client_id            String?                            @db.Uuid
+  case_id              String?                            @db.Uuid
+  reimbursed_amount    Decimal                            @default(0) @db.Decimal(14, 2)
+  reimbursement_status enum_expenses_reimbursement_status @default(UNREIMBURSED)
+  created_at           DateTime                           @db.Timestamptz(6)
+  updated_at           DateTime                           @db.Timestamptz(6)
+  reimbursed_at        DateTime?                          @db.Timestamptz(6)
+  collections          collections[]
+  cases                cases?                             @relation(fields: [case_id], references: [id])
+  clients              clients?                           @relation(fields: [client_id], references: [id])
+  employee             employee?                          @relation(fields: [paid_by_employee_id], references: [id])
+}
+
+model installments {
+  id                 String                   @id @db.Uuid
+  agreement_id       String                   @db.Uuid
+  installment_no     Int
+  due_date           DateTime                 @db.Date
+  amount             Decimal                  @db.Decimal(14, 2)
+  paid_amount        Decimal                  @default(0) @db.Decimal(14, 2)
+  status             enum_installments_status @default(PENDING)
+  paid_at            DateTime?                @db.Timestamptz(6)
+  collections        collections[]
+  payment_agreements payment_agreements       @relation(fields: [agreement_id], references: [id], onDelete: Cascade)
+}
+
+model notifications {
+  id                String                             @id @db.Uuid
+  employee_id       String                             @db.Uuid
+  type              enum_notifications_type
+  title             String                             @db.VarChar(255)
+  message           String?
+  related_entity    enum_notifications_related_entity?
+  related_id        String?                            @db.Uuid
+  related_public_id String?                            @db.VarChar(255)
+  is_read           Boolean                            @default(false)
+  read_at           DateTime?                          @db.Timestamptz(6)
+  created_at        DateTime                           @db.Timestamptz(6)
+  employee          employee                           @relation(fields: [employee_id], references: [id], onDelete: Cascade)
+}
+
+model payment_agreements {
+  id                          String                           @id @db.Uuid
+  public_id                   String                           @unique @db.VarChar(255)
+  client_id                   String                           @db.Uuid
+  case_id                     String?                          @db.Uuid
+  currency                    enum_payment_agreements_currency
+  total_amount                Decimal                          @db.Decimal(14, 2)
+  initial_down_payment_amount Decimal                          @default(0) @db.Decimal(14, 2)
+  description                 String?
+  created_at                  DateTime                         @db.Timestamptz(6)
+  updated_at                  DateTime                         @db.Timestamptz(6)
+  collections                 collections[]
+  installments                installments[]
+  cases                       cases?                           @relation(fields: [case_id], references: [id])
+  clients                     clients                          @relation(fields: [client_id], references: [id], onDelete: Cascade)
+}
+
+model receipts {
+  id            String      @id @db.Uuid
+  collection_id String      @unique @db.Uuid
+  receipt_no    String      @unique @db.VarChar(255)
+  file_url      String?     @db.VarChar(255)
+  issued_at     DateTime    @db.Timestamptz(6)
+  collections   collections @relation(fields: [collection_id], references: [id], onDelete: Cascade)
+}
+
+enum client_type_enum {
+  INDIVIDUAL
+  CORPORATE
+}
+
+enum employee_role_enum {
+  ADMIN
+  LAWYER
+}
+
+enum enum_cases_status {
+  OPEN
+  CLOSED
+}
+
+enum enum_clients_client_type {
+  INDIVIDUAL
+  CORPORATE
+}
+
+enum enum_collections_currency {
+  TRY
+  USD
+  EUR
+}
+
+enum enum_collections_method {
+  CASH
+  EFT
+  WIRE_TRANSFER
+  CREDIT_CARD
+  CHECK
+  OTHER
+}
+
+enum enum_collections_source_type {
+  DOWN_PAYMENT
+  INSTALLMENT
+  CONSULTING
+  EXPENSE_REFUND
+  OTHER
+}
+
+enum enum_employee_role {
+  ADMIN
+  LAWYER
+}
+
+enum enum_expenses_category {
+  COURT_FEE
+  SERVICE_OF_PROCESS
+  EXPERT_WITNESS
+  TRAVEL_EXPENSE
+  ACCOMMODATION
+  POST_COURIER
+  NOTARY
+  RENT
+  ELECTRICITY
+  INTERNET
+  PHONE
+  STATIONERY
+  OTHER
+}
+
+enum enum_expenses_currency {
+  TRY
+  USD
+  EUR
+}
+
+enum enum_expenses_reimbursement_status {
+  UNREIMBURSED
+  PARTIAL
+  REIMBURSED
+}
+
+enum enum_installments_status {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum enum_notifications_related_entity {
+  CASE
+  CLIENT
+  PAYMENT_AGREEMENT
+  INSTALLMENT
+  COLLECTION
+  EXPENSE
+}
+
+enum enum_notifications_type {
+  CASE_ASSIGNMENT
+  PAYMENT_DUE
+  COLLECTION_CREATED
+  EXPENSE_CREATED
+  GENERAL
+}
+
+enum enum_payment_agreements_currency {
+  TRY
+  USD
+  EUR
+}

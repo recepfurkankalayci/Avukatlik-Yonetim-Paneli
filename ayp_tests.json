@@ -1,0 +1,308 @@
+{
+  "info": {
+    "name": "AYP - 3.14 Module Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "adminToken", "value": "" },
+    { "key": "lawyerToken", "value": "" },
+    { "key": "clientId", "value": "" },
+    { "key": "caseId", "value": "" },
+    { "key": "casePublicId", "value": "" },
+    { "key": "notificationId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Happy Path",
+      "item": [
+        {
+          "name": "1. Admin Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Admin User\",\n  \"email\": \"admin@ayp.com\",\n  \"password\": \"AdminPass123\",\n  \"phone\": \"5000000000\",\n  \"role\": \"ADMIN\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if(jsonData.data && jsonData.data.token) { pm.collectionVariables.set(\"adminToken\", jsonData.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Lawyer Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Ahmet Avukat\",\n  \"email\": \"ahmet@ayp.com\",\n  \"password\": \"SecurePass123\",\n  \"phone\": \"5001234567\",\n  \"role\": \"LAWYER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if(jsonData.data && jsonData.data.token) { pm.collectionVariables.set(\"lawyerToken\", jsonData.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Create Client (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Kerem Müvekkil\",\n  \"email\": \"kerem@example.com\",\n  \"phone\": \"5009876543\",\n  \"client_type\": \"INDIVIDUAL\",\n  \"tc_no\": \"12345678901\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if(jsonData.data && jsonData.data.id) { pm.collectionVariables.set(\"clientId\", jsonData.data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Create Case",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["cases"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"case_no\": \"CAS-2026-001\",\n  \"title\": \"İcra Davası\",\n  \"description\": \"Alacak takibi\",\n  \"client_id\": \"{{clientId}}\",\n  \"docket_year\": 2026\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if(jsonData.data) {",
+                  "  pm.collectionVariables.set(\"caseId\", jsonData.data.id);",
+                  "  pm.collectionVariables.set(\"casePublicId\", jsonData.data.public_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Get Case Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{casePublicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cases", "{{casePublicId}}"]
+            }
+          }
+        },
+        {
+          "name": "6. Create Collection",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"case_id\": \"{{caseId}}\",\n  \"amount\": 50000,\n  \"source_type\": \"DIRECT_PAYMENT\",\n  \"payment_method\": \"BANK_TRANSFER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "7. Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if(jsonData.data && jsonData.data.length > 0) {",
+                  "  pm.collectionVariables.set(\"notificationId\", jsonData.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Negative Scenarios",
+      "item": [
+        {
+          "name": "1. Wrong Password (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ayp.com\",\n  \"password\": \"WrongPass\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2. No Token (401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["cases"]
+            }
+          }
+        },
+        {
+          "name": "3. Lawyer Creating Employee (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{lawyerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": ["{{baseUrl}}"],
+              "path": ["employees"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Yeni Calisan\",\n  \"email\": \"yeni@ayp.com\",\n  \"password\": \"Pass123\",\n  \"role\": \"LAWYER\",\n  \"phone\": \"5001112233\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4. Missing Fields in Case (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["cases"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"case_no\": \"CAS-ERR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "5. Invalid Status (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["cases", "{{caseId}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INVALID\"\n}"
+            }
+          }
+        },
+        {
+          "name": "6. Non-existent Case (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/nonexistent-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["cases", "nonexistent-id"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
